@@ -25,6 +25,7 @@ const selectedPlanIdInput = document.querySelector("#selected-plan-id");
 const selectedPlanLabel = document.querySelector("#selected-plan-label");
 const selectedPlanPrice = document.querySelector("#selected-plan-price");
 const submitPaymentButton = document.querySelector(".submit-payment");
+const promoValidity = document.querySelector("#promo-validity");
 
 let currentOrderId = null;
 let currentTransactionHash = null;
@@ -81,6 +82,19 @@ function formatCurrency(value) {
     style: "currency",
     currency: "BRL",
   });
+}
+
+function formatDatePtBr(date = new Date()) {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+
+  return `${day}/${month}/${year}`;
+}
+
+function updatePromoValidity() {
+  if (!promoValidity) return;
+  promoValidity.textContent = `ESSA PROMOÇÃO É VÁLIDA ATÉ ${formatDatePtBr()}`;
 }
 
 function getPixelProductParams(plan = selectedPlan) {
@@ -286,6 +300,17 @@ function restoreActiveOrder() {
     currentOrderId = saved.orderId;
     currentTransactionHash = saved.transactionHash || null;
     latestCustomerData = saved.customer || null;
+    if (saved.pixCode && pixCode) pixCode.value = saved.pixCode;
+
+    if (saved.pixCode && pixQrImage && pixQrEmpty) {
+      const qrImageSource = normalizeQrImageSource(saved.pixBase64, saved.pixCode);
+
+      if (qrImageSource) {
+        pixQrImage.src = qrImageSource;
+        pixQrImage.classList.add("is-visible");
+        pixQrEmpty.classList.add("is-hidden");
+      }
+    }
   } catch {
     // Ignore invalid persisted state.
   }
@@ -356,13 +381,15 @@ function openCheckout(sourceButton) {
     checkoutTracked = true;
   }
 
-  if (currentOrderId) {
-    pixResult?.classList.add("is-open");
-    pixResult?.setAttribute("aria-hidden", "false");
+  if (currentOrderId && pixCode?.value) {
+    showPixResult();
     deliveryStatus.textContent = "Consultando status do pagamento anterior...";
     checkOrderStatus().catch((error) => {
       deliveryStatus.textContent = error.message;
     });
+  } else {
+    hidePixResult();
+    deliveryStatus.textContent = "";
   }
 }
 
@@ -376,6 +403,27 @@ function setFeedback(message = "", type = "info") {
   if (!paymentFeedback) return;
   paymentFeedback.textContent = message;
   paymentFeedback.dataset.type = type;
+}
+
+function hidePixResult({ clearCode = false } = {}) {
+  pixResult?.classList.remove("is-open");
+  pixResult?.setAttribute("aria-hidden", "true");
+  pixResult?.setAttribute("hidden", "");
+  if (clearCode && pixCode) pixCode.value = "";
+
+  if (clearCode && pixQrImage && pixQrEmpty) {
+    pixQrImage.removeAttribute("src");
+    pixQrImage.classList.remove("is-visible");
+    pixQrEmpty.classList.remove("is-hidden");
+  }
+}
+
+function showPixResult() {
+  if (!pixCode?.value) return;
+
+  pixResult?.removeAttribute("hidden");
+  pixResult?.classList.add("is-open");
+  pixResult?.setAttribute("aria-hidden", "false");
 }
 
 function resetSubmitButton(button) {
@@ -484,6 +532,7 @@ promoToggle?.addEventListener("click", () => {
 
 trackMetaEvent("PageView", {}, { eventId: window.__metaPageViewEventId, skipBrowser: true });
 trackMetaEvent("ViewContent", getPixelProductParams());
+updatePromoValidity();
 restoreActiveOrder();
 
 if (previewVideos.length) {
@@ -530,7 +579,7 @@ checkoutForm?.addEventListener("submit", async (event) => {
   submitButton.textContent = "Gerando Pix...";
   setFeedback("");
   deliveryStatus.textContent = "";
-  pixResult?.classList.remove("is-open");
+  hidePixResult({ clearCode: true });
 
   try {
     const response = await fetch("/api/payments/checkout", {
@@ -562,6 +611,8 @@ checkoutForm?.addEventListener("submit", async (event) => {
       orderId: currentOrderId,
       transactionHash: currentTransactionHash,
       customer: latestCustomerData,
+      pixCode: data.pix_code || "",
+      pixBase64: data.pix_base64 || "",
     });
 
     if (pixCode) pixCode.value = data.pix_code || "";
@@ -579,8 +630,7 @@ checkoutForm?.addEventListener("submit", async (event) => {
       }
     }
 
-    pixResult?.classList.add("is-open");
-    pixResult?.setAttribute("aria-hidden", "false");
+    showPixResult();
     scrollToPixResult();
     if (!addToCartTracked) {
       trackMetaEvent("AddToCart", getPixelProductParams(), { customer: latestCustomerData });

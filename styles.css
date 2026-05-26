@@ -918,6 +918,10 @@ legend {
   border-top: 1px solid var(--line);
 }
 
+.pix-result[hidden] {
+  display: none !important;
+}
+
 .pix-result.is-open {
   display: grid;
 }
