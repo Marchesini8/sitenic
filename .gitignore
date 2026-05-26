@@ -1,0 +1,13 @@
+.env
+node_modules/
+orders-data.json
+npm-debug.log*
+private/*.tmp
+dev-server.*
+start-server.cmd
+outputs/
+criar_planilha_*.mjs
+private/Planilha Fofinha.xlsx
+assets/cat-box.png
+assets/cat-sparkle.png
+assets/planilha-preview.png
