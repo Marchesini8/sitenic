@@ -70,6 +70,22 @@ function getOrderByTransaction(transactionHash) {
   return id ? getOrder(id) : null;
 }
 
+function findRecentPendingOrder({ email, planId, maxAgeMs = 10 * 60 * 1000 } = {}) {
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const now = Date.now();
+
+  if (!normalizedEmail || !planId) return null;
+
+  return Array.from(ordersById.values()).reverse().find((order) => {
+    if (!order || order.isPaid || order.status !== "pending") return false;
+    if (String(order.customer?.email || "").trim().toLowerCase() !== normalizedEmail) return false;
+    if (order.item?.planId !== planId) return false;
+
+    const createdAt = new Date(order.createdAt).getTime();
+    return Number.isFinite(createdAt) && now - createdAt <= maxAgeMs;
+  }) || null;
+}
+
 function updateOrder(id, patch = {}) {
   const current = getOrder(id);
   if (!current) return null;
@@ -105,6 +121,7 @@ module.exports = {
   createOrder,
   getOrder,
   getOrderByTransaction,
+  findRecentPendingOrder,
   updateOrder,
   addDeliveryAttempt,
 };

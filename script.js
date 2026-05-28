@@ -42,6 +42,8 @@ let leadTracked = false;
 let purchaseTracked = false;
 let latestCustomerData = null;
 let latestOrderItem = null;
+let isGeneratingPayment = false;
+let lastPixSignature = "";
 let selectedPlan = {
   id: "15d",
   label: "15 Dias",
@@ -312,6 +314,11 @@ function restoreActiveOrder() {
     if (saved.item?.id && saved.item?.label) {
       updateSelectedPlan(saved.item);
     }
+    if (saved.customer && saved.item?.id) {
+      lastPixSignature = [saved.item.id, saved.customer.name || "", saved.customer.email || ""]
+        .map((value) => String(value).trim().toLowerCase())
+        .join("|");
+    }
     if (saved.pixCode && pixCode) pixCode.value = saved.pixCode;
 
     if (saved.pixCode && pixQrImage && pixQrEmpty) {
@@ -370,12 +377,16 @@ function updateSelectedPlan(plan = {}) {
   const price = Number(plan.price || plan.dataset?.planPrice || selectedPlan.price);
   const label = plan.label || plan.dataset?.planLabel || selectedPlan.label;
   const id = plan.id || plan.dataset?.planId || selectedPlan.id;
+  const planChanged = id !== selectedPlan.id;
 
   selectedPlan = { id, label, price };
 
   if (selectedPlanIdInput) selectedPlanIdInput.value = selectedPlan.id;
   if (selectedPlanLabel) selectedPlanLabel.textContent = selectedPlan.label;
   if (selectedPlanPrice) selectedPlanPrice.textContent = formatCurrency(selectedPlan.price);
+  if (planChanged) {
+    lastPixSignature = "";
+  }
   resetSubmitButton(submitPaymentButton);
 }
 
@@ -392,6 +403,12 @@ function prefillCheckoutForm() {
 function resetCheckoutInteraction() {
   hidePixResult({ clearCode: true });
   setFeedback("");
+  isGeneratingPayment = false;
+  lastPixSignature = "";
+  if (submitPaymentButton) {
+    submitPaymentButton.disabled = false;
+    resetSubmitButton(submitPaymentButton);
+  }
   if (deliveryStatus) deliveryStatus.textContent = "";
 }
 
@@ -425,6 +442,7 @@ function openCheckout(sourceButton, options = {}) {
 
   if (currentOrderId && pixCode?.value) {
     showPixResult();
+    setSubmitButtonGenerated(submitPaymentButton);
     deliveryStatus.textContent = "Consultando status do pagamento anterior...";
     checkOrderStatus().catch((error) => {
       deliveryStatus.textContent = error.message;
@@ -511,7 +529,21 @@ function showPixResult() {
 }
 
 function resetSubmitButton(button) {
-  if (button) button.textContent = `Gerar Pix de ${formatCurrency(selectedPlan.price)}`;
+  if (!button) return;
+  button.disabled = false;
+  button.textContent = `Gerar Pix de ${formatCurrency(selectedPlan.price)}`;
+}
+
+function setSubmitButtonGenerated(button) {
+  if (!button) return;
+  button.disabled = true;
+  button.textContent = "Pix gerado";
+}
+
+function getCheckoutSignature(payload = {}) {
+  return [selectedPlan.id, payload.name || "", payload.email || ""]
+    .map((value) => String(value).trim().toLowerCase())
+    .join("|");
 }
 
 function scrollToPixResult() {
@@ -684,11 +716,24 @@ checkoutForm?.addEventListener("submit", async (event) => {
   const submitButton = checkoutForm.querySelector(".submit-payment");
   const formData = new FormData(checkoutForm);
   const payload = Object.fromEntries(formData.entries());
+  const checkoutSignature = getCheckoutSignature(payload);
+
+  if (isGeneratingPayment) return;
+
+  if (currentOrderId && pixCode?.value && checkoutSignature === lastPixSignature) {
+    showPixResult();
+    scrollToPixResult();
+    setSubmitButtonGenerated(submitButton);
+    setFeedback("Pix ja gerado. Use o QR Code ou o copia e cola abaixo.", "success");
+    return;
+  }
+
   latestCustomerData = {
     name: payload.name,
     email: payload.email,
   };
 
+  isGeneratingPayment = true;
   submitButton.disabled = true;
   submitButton.textContent = "Gerando Pix...";
   setFeedback("");
@@ -721,6 +766,7 @@ checkoutForm?.addEventListener("submit", async (event) => {
 
     currentOrderId = data.order_id;
     currentTransactionHash = data.transaction_hash;
+    lastPixSignature = checkoutSignature;
     saveActiveOrder({
       orderId: currentOrderId,
       transactionHash: currentTransactionHash,
@@ -760,12 +806,19 @@ checkoutForm?.addEventListener("submit", async (event) => {
       ? "Aguardando confirmacao do pagamento."
       : "Pix gerado. Depois de pagar, clique em verificar pagamento.";
     startPolling();
+    setSubmitButtonGenerated(submitButton);
   } catch (error) {
     setFeedback(error.message, "error");
-  } finally {
-    submitButton.disabled = false;
     resetSubmitButton(submitButton);
+  } finally {
+    isGeneratingPayment = false;
   }
+});
+
+checkoutForm?.addEventListener("input", () => {
+  if (isGeneratingPayment) return;
+  lastPixSignature = "";
+  resetSubmitButton(submitPaymentButton);
 });
 
 copyPixButton?.addEventListener("click", async () => {

@@ -4,6 +4,7 @@ const orderStore = require("../services/orderStore");
 const metaCapiService = require("../services/metaCapiService");
 
 const router = express.Router();
+const pendingCheckoutRequests = new Map();
 
 const SUBSCRIPTION_PLANS = {
   "15d": {
@@ -62,6 +63,10 @@ function getSelectedPlan(planId) {
   return SUBSCRIPTION_PLANS[planId] || SUBSCRIPTION_PLANS["15d"];
 }
 
+function getCheckoutRequestKey({ customer, planId }) {
+  return [String(customer.email || "").trim().toLowerCase(), planId || "15d"].join("|");
+}
+
 router.post("/checkout", async (req, res) => {
   try {
     const { customer, deliveryPreference, planId } = req.body;
@@ -80,34 +85,71 @@ router.post("/checkout", async (req, res) => {
     };
 
     const selectedPlan = getSelectedPlan(planId);
+    const normalizedPlanId = SUBSCRIPTION_PLANS[planId] ? planId : "15d";
+    const recentPendingOrder = orderStore.findRecentPendingOrder({
+      email: normalizedCustomer.email,
+      planId: normalizedPlanId,
+    });
+
+    if (recentPendingOrder?.pixCode) {
+      return res.json({
+        transaction_hash: recentPendingOrder.transactionHash,
+        status: recentPendingOrder.status || "pending",
+        pix_code: recentPendingOrder.pixCode,
+        pix_base64: "",
+        charged_total: recentPendingOrder.item?.price || selectedPlan.price,
+        product_total: recentPendingOrder.item?.price || selectedPlan.price,
+        shipping_total: 0,
+        source: "ironpay",
+        order_id: recentPendingOrder.id,
+        delivery_preference: recentPendingOrder.deliveryPreference,
+        reused: true,
+      });
+    }
+
     const productName = `${process.env.PRODUCT_NAME || "Acesso Premium Nicolle"} - ${selectedPlan.label}`;
     const item = {
       title: productName,
       price: selectedPlan.price,
       quantity: 1,
-      planId: planId || "15d",
+      planId: normalizedPlanId,
     };
 
-    const payment = await paymentService.createPixPayment({
-      items: [item],
-      customer: normalizedCustomer,
-      delivery: {},
-      tracking,
-    });
+    const checkoutKey = getCheckoutRequestKey({ customer: normalizedCustomer, planId: normalizedPlanId });
+    let checkoutPromise = pendingCheckoutRequests.get(checkoutKey);
 
-    const order = orderStore.createOrder({
-      customer: normalizedCustomer,
-      deliveryPreference: sanitizePreference(deliveryPreference),
-      item,
-      transactionHash: payment.transaction_hash,
-      pixCode: payment.pix_code,
-      metaAttribution: {
-        ...attribution,
-        external_id: attribution.external_id || metaCapiService.createExternalId(normalizedCustomer),
-        client_ip_address: getIp(req),
-        client_user_agent: req.headers["user-agent"] || "",
-      },
-    });
+    if (!checkoutPromise) {
+      checkoutPromise = (async () => {
+        const payment = await paymentService.createPixPayment({
+          items: [item],
+          customer: normalizedCustomer,
+          delivery: {},
+          tracking,
+        });
+
+        const order = orderStore.createOrder({
+          customer: normalizedCustomer,
+          deliveryPreference: sanitizePreference(deliveryPreference),
+          item,
+          transactionHash: payment.transaction_hash,
+          pixCode: payment.pix_code,
+          metaAttribution: {
+            ...attribution,
+            external_id: attribution.external_id || metaCapiService.createExternalId(normalizedCustomer),
+            client_ip_address: getIp(req),
+            client_user_agent: req.headers["user-agent"] || "",
+          },
+        });
+
+        return { payment, order };
+      })().finally(() => {
+        pendingCheckoutRequests.delete(checkoutKey);
+      });
+
+      pendingCheckoutRequests.set(checkoutKey, checkoutPromise);
+    }
+
+    const { payment, order } = await checkoutPromise;
 
     return res.json({
       ...payment,

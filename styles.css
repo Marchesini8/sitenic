@@ -931,9 +931,16 @@ video {
   line-height: 1;
 }
 
-@media (max-width: 360px) {
+@media (max-width: 430px) {
   .delivery-email-notice {
-    margin-left: 18px;
+    align-items: flex-start;
+    margin: 4px 18px 6px;
+    padding: 10px 11px;
+    font-size: 0.78rem;
+  }
+
+  .delivery-email-notice span {
+    padding-top: 1px;
   }
 }
 
@@ -1201,6 +1208,12 @@ legend {
 
   .modal-card {
     width: min(430px, 100%);
+  }
+
+  .checkout-form,
+  .pix-result {
+    gap: 14px;
+    padding: 16px;
   }
 
   .faq-section {
