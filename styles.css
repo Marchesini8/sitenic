@@ -909,6 +909,34 @@ video {
   padding: 18px;
 }
 
+.delivery-email-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 18px 6px 84px;
+  padding: 10px 12px;
+  border: 1px solid #a9efd0;
+  border-radius: 7px;
+  background: #eafff4;
+  color: #00845c;
+  font-size: 0.82rem;
+  line-height: 1.18;
+  font-weight: 900;
+}
+
+.delivery-email-notice span {
+  flex: 0 0 auto;
+  color: #20c889;
+  font-size: 0.96rem;
+  line-height: 1;
+}
+
+@media (max-width: 360px) {
+  .delivery-email-notice {
+    margin-left: 18px;
+  }
+}
+
 .checkout-form label,
 .pix-result label {
   display: grid;
