@@ -9,7 +9,7 @@ const pendingCheckoutRequests = new Map();
 const SUBSCRIPTION_PLANS = {
   "15d": {
     label: "15 Dias",
-    price: 17.99,
+    price: 19.99,
   },
   "30d": {
     label: "30 Dias",
@@ -91,7 +91,10 @@ router.post("/checkout", async (req, res) => {
       planId: normalizedPlanId,
     });
 
-    if (recentPendingOrder?.pixCode) {
+    const recentPendingOrderHasCurrentPrice =
+      Number(recentPendingOrder?.item?.price || 0) === selectedPlan.price;
+
+    if (recentPendingOrder?.pixCode && recentPendingOrderHasCurrentPrice) {
       return res.json({
         transaction_hash: recentPendingOrder.transactionHash,
         status: recentPendingOrder.status || "pending",
