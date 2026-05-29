@@ -7,6 +7,7 @@ const SUPPORTED_EVENTS = new Set([
   "ViewContent",
   "AddToCart",
   "InitiateCheckout",
+  "AddPaymentInfo",
   "Purchase",
   "Lead",
 ]);
@@ -100,20 +101,36 @@ function buildEvent(req, payload = {}) {
   };
 }
 
-async function sendEvent(req, payload) {
-  const pixelId = process.env.META_PIXEL_ID;
-  const accessToken = process.env.META_ACCESS_TOKEN;
+function getMetaDestinations() {
+  const destinations = [
+    {
+      label: "primary",
+      pixelId: process.env.META_PIXEL_ID,
+      accessToken: process.env.META_ACCESS_TOKEN,
+    },
+    {
+      label: "secondary",
+      pixelId: process.env.META_SECOND_PIXEL_ID,
+      accessToken: process.env.META_SECOND_ACCESS_TOKEN || process.env.META_ACCESS_TOKEN,
+    },
+  ];
+  const seenPixelIds = new Set();
 
-  if (!pixelId || !accessToken) {
-    const error = new Error("META_PIXEL_ID e META_ACCESS_TOKEN precisam estar configurados no .env.");
-    error.statusCode = 500;
-    throw error;
-  }
+  return destinations.filter(({ pixelId, accessToken }) => {
+    if (!pixelId || !accessToken || seenPixelIds.has(pixelId)) return false;
+    seenPixelIds.add(pixelId);
+    return true;
+  });
+}
 
-  const event = buildEvent(req, payload);
-  const url = `${META_CAPI_URL}/${pixelId}/events?access_token=${encodeURIComponent(accessToken)}`;
+async function sendEventToDestination(destination, event) {
+  const url = `${META_CAPI_URL}/${destination.pixelId}/events?access_token=${encodeURIComponent(
+    destination.accessToken
+  )}`;
 
   console.info("[Meta CAPI] Enviando evento", {
+    destination: destination.label,
+    pixel_id: destination.pixelId,
     event_name: event.event_name,
     event_id: event.event_id,
     has_fbp: Boolean(event.user_data.fbp),
@@ -139,6 +156,8 @@ async function sendEvent(req, payload) {
 
   if (!response.ok) {
     console.error("[Meta CAPI] Erro ao enviar evento", {
+      destination: destination.label,
+      pixel_id: destination.pixelId,
       event_name: event.event_name,
       event_id: event.event_id,
       status: response.status,
@@ -150,13 +169,49 @@ async function sendEvent(req, payload) {
   }
 
   console.info("[Meta CAPI] Evento enviado", {
+    destination: destination.label,
+    pixel_id: destination.pixelId,
     event_name: event.event_name,
     event_id: event.event_id,
     fbtrace_id: data.fbtrace_id,
     events_received: data.events_received,
   });
 
-  return data;
+  return {
+    destination: destination.label,
+    pixel_id: destination.pixelId,
+    data,
+  };
+}
+
+async function sendEvent(req, payload) {
+  const destinations = getMetaDestinations();
+
+  if (!destinations.length) {
+    const error = new Error("META_PIXEL_ID e META_ACCESS_TOKEN precisam estar configurados no .env.");
+    error.statusCode = 500;
+    throw error;
+  }
+
+  const event = buildEvent(req, payload);
+  const [primaryDestination, ...secondaryDestinations] = destinations;
+  const primaryResult = await sendEventToDestination(primaryDestination, event);
+  const secondaryResults = await Promise.allSettled(
+    secondaryDestinations.map((destination) => sendEventToDestination(destination, event))
+  );
+  const successfulSecondaryResults = secondaryResults
+    .filter((result) => result.status === "fulfilled")
+    .map((result) => result.value);
+  const failedSecondaryResults = secondaryResults
+    .filter((result) => result.status === "rejected")
+    .map((result) => result.reason?.message || "Erro ao enviar evento para pixel secundario.");
+  const results = [primaryResult, ...successfulSecondaryResults];
+
+  return {
+    events_received: results.reduce((sum, result) => sum + Number(result.data?.events_received || 0), 0),
+    errors: failedSecondaryResults,
+    results,
+  };
 }
 
 async function sendPurchaseFromOrder(req, order) {

@@ -48,6 +48,9 @@ let pixCopyToastTimer = null;
 let selectedPlanId = new URLSearchParams(window.location.search).get("planId") || "15d";
 let selectedPlan = plans[selectedPlanId] || plans["15d"];
 if (!plans[selectedPlanId]) selectedPlanId = "15d";
+let latestCustomerData = {};
+let addToCartTracked = false;
+const externalIdCookieName = "site18_external_id";
 
 function formatCurrency(value) {
   return Number(value || 0).toLocaleString("pt-BR", {
@@ -67,6 +70,147 @@ function getSelectedAddons() {
 
 function getTotal() {
   return getSelectedAddons().reduce((sum, addon) => sum + addon.price, selectedPlan.price);
+}
+
+function getPixelProductParams() {
+  const contents = [
+    {
+      id: `site-18-nicolle-premium-${selectedPlanId}`,
+      quantity: 1,
+      item_price: selectedPlan.price,
+    },
+    ...getSelectedAddons().map((addon) => ({
+      id: `site-18-nicolle-${addon.id}`,
+      quantity: 1,
+      item_price: addon.price,
+    })),
+  ];
+
+  return {
+    content_name: `Acesso Premium Nicolle - ${selectedPlan.period}`,
+    content_type: "product",
+    content_ids: contents.map((item) => item.id),
+    contents,
+    currency: "BRL",
+    value: getTotal(),
+  };
+}
+
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : "";
+}
+
+function setCookie(name, value, days = 90) {
+  const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+}
+
+function captureFbclid() {
+  const fbclid = new URLSearchParams(window.location.search).get("fbclid");
+  if (!fbclid) return getCookie("_fbc");
+
+  const existing = getCookie("_fbc");
+  if (existing && existing.includes(fbclid)) return existing;
+
+  const fbc = `fb.1.${Date.now()}.${fbclid}`;
+  setCookie("_fbc", fbc);
+  return fbc;
+}
+
+function getOrCreateFbp() {
+  const existing = getCookie("_fbp");
+  if (existing) return existing;
+
+  const randomValue = Math.floor(Math.random() * 10 ** 16);
+  const fbp = `fb.1.${Date.now()}.${randomValue}`;
+  setCookie("_fbp", fbp);
+  return fbp;
+}
+
+function getOrCreateExternalId() {
+  const existing = getCookie(externalIdCookieName);
+  if (existing) return existing;
+
+  const externalId = window.crypto?.randomUUID
+    ? window.crypto.randomUUID()
+    : `${Date.now()}.${Math.random().toString(16).slice(2)}`;
+  setCookie(externalIdCookieName, externalId, 365);
+  return externalId;
+}
+
+function getMetaUserData(extra = {}) {
+  return {
+    fbp: getOrCreateFbp(),
+    fbc: captureFbclid(),
+    external_id: extra.external_id || getOrCreateExternalId(),
+    email: extra.email,
+    phone: extra.phone,
+  };
+}
+
+function createEventId(eventName) {
+  if (window.crypto?.randomUUID) {
+    return `${eventName}.${window.crypto.randomUUID()}`;
+  }
+
+  return `${eventName}.${Date.now()}.${Math.random().toString(16).slice(2)}`;
+}
+
+function sendCapiEvent({ eventName, eventId, params = {}, customer = {} }) {
+  return fetch("/api/meta/events", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      event_name: eventName,
+      event_id: eventId,
+      event_source_url: window.location.href,
+      custom_data: params,
+      user_data: getMetaUserData(customer),
+    }),
+  }).catch((error) => {
+    console.warn("[Meta CAPI] Falha ao enviar evento", eventName, error);
+  });
+}
+
+function trackMetaEvent(eventName, params = {}, options = {}) {
+  const eventId = options.eventId || createEventId(eventName);
+  const customer = options.customer || latestCustomerData || {};
+
+  if (!options.skipBrowser && typeof window.fbq === "function") {
+    window.fbq("track", eventName, params, { eventID: eventId });
+  }
+
+  if (!options.skipCapi) {
+    sendCapiEvent({
+      eventName,
+      eventId,
+      params,
+      customer,
+    });
+  }
+
+  return eventId;
+}
+
+function getPurchaseStorageKey(orderId) {
+  return `purchase_tracked_${orderId}`;
+}
+
+function hasTrackedPurchase(orderId) {
+  try {
+    return window.localStorage.getItem(getPurchaseStorageKey(orderId)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markPurchaseTracked(orderId) {
+  try {
+    window.localStorage.setItem(getPurchaseStorageKey(orderId), "1");
+  } catch {}
 }
 
 function updateTotal() {
@@ -233,6 +377,7 @@ function getTrackingData() {
 
 function getMetaAttributionData() {
   return {
+    ...getMetaUserData(),
     event_source_url: window.location.href,
   };
 }
@@ -250,6 +395,13 @@ async function checkOrderStatus() {
   if (data.isPaid) {
     window.clearInterval(pollTimer);
     pollTimer = null;
+    if (!hasTrackedPurchase(currentOrderId)) {
+      trackMetaEvent("Purchase", getPixelProductParams(), {
+        eventId: `Purchase.${currentOrderId}`,
+        skipCapi: true,
+      });
+      markPurchaseTracked(currentOrderId);
+    }
     setDeliveryStatus("Pagamento confirmado. Seu acesso foi liberado.", "success");
     return;
   }
@@ -284,6 +436,11 @@ checkoutForm?.addEventListener("submit", async (event) => {
   const formData = new FormData(checkoutForm);
   const payload = Object.fromEntries(formData.entries());
   const addons = getSelectedAddons().map((addon) => addon.id);
+  latestCustomerData = {
+    name: payload.name,
+    email: payload.email,
+  };
+  trackMetaEvent("InitiateCheckout", getPixelProductParams(), { customer: latestCustomerData });
 
   generatePixButton.disabled = true;
   generatePixButton.textContent = "GERANDO PIX...";
@@ -318,6 +475,10 @@ checkoutForm?.addEventListener("submit", async (event) => {
     currentOrderId = data.order_id;
     currentTransactionHash = data.transaction_hash;
     showPixResult(data);
+    if (!addToCartTracked) {
+      trackMetaEvent("AddToCart", getPixelProductParams(), { customer: latestCustomerData });
+      addToCartTracked = true;
+    }
     setFeedback("Pix gerado. Pague usando o QR Code ou o código copia e cola.", "success");
     setDeliveryStatus("");
     startPolling();
@@ -355,4 +516,6 @@ checkoutPixCode?.addEventListener("pointerup", async (event) => {
 
 document.addEventListener("pointerdown", blurCheckoutFieldOnOutsideTap);
 
+trackMetaEvent("PageView", {}, { eventId: window.__metaPageViewEventId, skipBrowser: true });
+trackMetaEvent("ViewContent", getPixelProductParams());
 updateTotal();
