@@ -219,6 +219,8 @@ textarea:focus {
 
 #checkout-pix-code {
   cursor: pointer;
+  caret-color: transparent;
+  user-select: none;
 }
 
 .pix-method {
@@ -480,7 +482,7 @@ textarea:focus {
   align-items: center;
   justify-content: center;
   min-height: 84px;
-  margin: -4px 0 -2px;
+  margin: 2px 0 0;
   padding: 10px 18px;
   border-radius: 10px;
   background: #fff;
@@ -542,6 +544,13 @@ textarea:focus {
   padding: 20px;
 }
 
+.pix-result-page .safe-checkout-strip {
+  min-height: auto;
+  margin: 0;
+  padding: 8px 0 0;
+  border-radius: 8px;
+}
+
 .pix-result-page[hidden] {
   display: none;
 }
@@ -570,29 +579,28 @@ textarea:focus {
 
 .pix-page-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: 1fr;
 }
 
 .pix-page-actions button {
-  min-height: 46px;
-  border: 1px solid #d8dde6;
+  min-height: 58px;
+  border: 1px solid var(--orange);
   border-radius: 8px;
-  background: #fff;
-  color: #1d2638;
-  font-weight: 850;
-  cursor: pointer;
-}
-
-.pix-page-actions .check-payment-page {
-  border-color: var(--orange);
   background: var(--orange);
   color: #fff;
+  font-size: 1rem;
+  font-weight: 950;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.pix-page-actions .check-payment-page:hover {
+.pix-page-actions button:hover {
   border-color: var(--orange-dark);
   background: var(--orange-dark);
+}
+
+.copy-pix-page.is-copying {
+  animation: copyButtonConfirm 0.42s ease;
 }
 
 .checkout-delivery-status {
@@ -823,6 +831,19 @@ textarea:focus {
   50% {
     transform: scale(1.018);
     box-shadow: 0 16px 34px rgba(255, 90, 31, 0.32);
+  }
+}
+
+@keyframes copyButtonConfirm {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 10px 22px rgba(255, 90, 31, 0.18);
+  }
+
+  45% {
+    transform: scale(1.035);
+    box-shadow: 0 16px 30px rgba(255, 90, 31, 0.34);
   }
 }
 

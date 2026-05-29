@@ -11,7 +11,6 @@ const checkoutPixQr = document.querySelector("#checkout-pix-qr");
 const checkoutPixEmpty = document.querySelector("#checkout-pix-empty");
 const checkoutPixCode = document.querySelector("#checkout-pix-code");
 const copyPixPageButton = document.querySelector(".copy-pix-page");
-const checkPaymentPageButton = document.querySelector(".check-payment-page");
 const checkoutDeliveryStatus = document.querySelector("#checkout-delivery-status");
 
 const plans = {
@@ -108,15 +107,29 @@ async function copyPixCode() {
   const code = checkoutPixCode?.value || "";
   if (!code) return false;
 
+  const fallbackField = document.createElement("textarea");
+  fallbackField.value = code;
+  fallbackField.setAttribute("readonly", "");
+  fallbackField.style.position = "fixed";
+  fallbackField.style.left = "-9999px";
+  fallbackField.style.top = "0";
+  fallbackField.style.opacity = "0";
+  fallbackField.style.fontSize = "16px";
+  document.body.appendChild(fallbackField);
+  fallbackField.focus({ preventScroll: true });
+  fallbackField.select();
+  fallbackField.setSelectionRange(0, fallbackField.value.length);
+  const copiedWithFallback = document.execCommand("copy");
+  fallbackField.remove();
+
+  let copiedWithClipboard = false;
   try {
-    await navigator.clipboard.writeText(code);
-  } catch {
-    checkoutPixCode.select();
-    document.execCommand("copy");
-  }
+    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(code);
+    copiedWithClipboard = Boolean(navigator.clipboard?.writeText);
+  } catch {}
 
   checkoutPixCode.blur();
-  return true;
+  return copiedWithFallback || copiedWithClipboard;
 }
 
 function showPixCopyToast() {
@@ -139,6 +152,24 @@ function showPixCopyToast() {
     toast.classList.add("is-leaving");
     toast.classList.remove("is-visible");
   }, 1300);
+}
+
+function smoothScrollTo(targetY, duration = 900) {
+  const startY = window.scrollY;
+  const distance = Math.max(0, targetY) - startY;
+  const startTime = performance.now();
+
+  function easeInOutCubic(progress) {
+    return progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+  }
+
+  function step(now) {
+    const progress = Math.min(1, (now - startTime) / duration);
+    window.scrollTo(0, startY + distance * easeInOutCubic(progress));
+    if (progress < 1) window.requestAnimationFrame(step);
+  }
+
+  window.requestAnimationFrame(step);
 }
 
 function buildQrCodeUrl(pixPayload = "") {
@@ -182,8 +213,9 @@ function showPixResult(data = {}) {
   pixResultPage.hidden = false;
   generatePixButton?.classList.add("is-hidden");
   window.requestAnimationFrame(() => {
-    const targetTop = pixResultPage.getBoundingClientRect().top + window.scrollY - 12;
-    window.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
+    const pageTop = pixResultPage.getBoundingClientRect().top + window.scrollY;
+    const targetTop = pageTop - window.innerHeight * 0.18;
+    smoothScrollTo(targetTop, 950);
   });
 }
 
@@ -222,10 +254,7 @@ async function checkOrderStatus() {
     return;
   }
 
-  setDeliveryStatus(
-    "Pagamento ainda pendente. Depois de pagar, a confirmacao pode levar alguns instantes.",
-    "pending"
-  );
+  setDeliveryStatus("");
 }
 
 function startPolling() {
@@ -290,12 +319,7 @@ checkoutForm?.addEventListener("submit", async (event) => {
     currentTransactionHash = data.transaction_hash;
     showPixResult(data);
     setFeedback("Pix gerado. Pague usando o QR Code ou o código copia e cola.", "success");
-    setDeliveryStatus(
-      currentTransactionHash
-      ? "Aguardando confirmação do pagamento."
-      : "Pix gerado. Depois de pagar, clique em verificar pagamento.",
-      "info"
-    );
+    setDeliveryStatus("");
     startPolling();
   } catch (error) {
     setFeedback(error.message, "error");
@@ -310,21 +334,23 @@ copyPixPageButton?.addEventListener("click", async () => {
   const wasCopied = await copyPixCode();
   if (!wasCopied) return;
 
+  copyPixPageButton.classList.add("is-copying");
+  window.setTimeout(() => {
+    copyPixPageButton.classList.remove("is-copying");
+  }, 420);
   showPixCopyToast();
 });
 
-checkoutPixCode?.addEventListener("pointerdown", async (event) => {
+checkoutPixCode?.addEventListener("pointerdown", (event) => {
+  event.preventDefault();
+});
+
+checkoutPixCode?.addEventListener("pointerup", async (event) => {
   event.preventDefault();
   const wasCopied = await copyPixCode();
   if (!wasCopied) return;
 
   showPixCopyToast();
-});
-
-checkPaymentPageButton?.addEventListener("click", () => {
-  checkOrderStatus().catch((error) => {
-    setDeliveryStatus(error.message, "error");
-  });
 });
 
 document.addEventListener("pointerdown", blurCheckoutFieldOnOutsideTap);
