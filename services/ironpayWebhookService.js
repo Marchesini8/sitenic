@@ -49,8 +49,22 @@ function normalizeWebhookPayload(payload = {}) {
     source.transactionHash,
     source.hash,
     source.id,
+    source.pix?.transaction_hash,
+    source.pix?.transactionHash,
+    source.pix?.hash,
+    source.pix?.id,
+    source.transaction?.transaction_hash,
+    source.transaction?.transactionHash,
+    source.transaction?.hash,
+    source.transaction?.id,
+    source.payment?.transaction_hash,
+    source.payment?.transactionHash,
+    source.payment?.hash,
+    source.payment?.id,
     payload.transaction_hash,
-    payload.transactionHash
+    payload.transactionHash,
+    payload.hash,
+    payload.id
   );
   const status = normalizeStatus(firstValue(source.status, source.payment_status, payload.status));
   const amountValue = firstValue(source.amount, source.total, source.value, payload.amount);
