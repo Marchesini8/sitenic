@@ -1,5 +1,6 @@
 const checkoutForm = document.querySelector("#checkout-page-form");
 const checkoutPlanLabel = document.querySelector("#checkout-plan-label");
+const checkoutPlanPeriod = document.querySelector("#checkout-plan-period");
 const checkoutPlanPrice = document.querySelector("#checkout-plan-price");
 const checkoutTotal = document.querySelector("#checkout-total");
 const addonInputs = document.querySelectorAll('input[name="addons"]');
@@ -65,9 +66,24 @@ function getTotal() {
 
 function updateTotal() {
   if (checkoutPlanLabel) checkoutPlanLabel.textContent = selectedPlan.label;
+  if (checkoutPlanPeriod) checkoutPlanPeriod.textContent = selectedPlan.period;
   if (checkoutPlanPrice) checkoutPlanPrice.textContent = formatCurrency(selectedPlan.price);
   if (checkoutTotal) checkoutTotal.textContent = formatCurrency(getTotal());
   if (generatePixButton) generatePixButton.textContent = `GERAR PIX - ${formatCurrency(getTotal())}`;
+}
+
+function blurCheckoutFieldOnOutsideTap(event) {
+  const activeElement = document.activeElement;
+  const isTextField =
+    activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement;
+
+  if (!isTextField || !checkoutForm?.contains(activeElement)) return;
+
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  if (target.closest("input, textarea, select")) return;
+
+  activeElement.blur();
 }
 
 function setFeedback(message = "", type = "info") {
@@ -254,5 +270,7 @@ checkPaymentPageButton?.addEventListener("click", () => {
     checkoutDeliveryStatus.textContent = error.message;
   });
 });
+
+document.addEventListener("pointerdown", blurCheckoutFieldOnOutsideTap);
 
 updateTotal();

@@ -101,7 +101,7 @@
             </div>
           </div>
 
-          <div class="bio-block">
+          <div class="bio-block is-collapsed">
             <p class="bio-text" id="bioText">
               🚨 O que todos sempre quiseram ver agora foi liberado e sem censura... Após término de relacionamento
               a influencer Nicolle Caroline deixou vazar vários vídeos íntimos dela, e isso ta virando a internet de
@@ -140,6 +140,13 @@
               <span><i class="fas fa-lock"></i> Pagamento 100% seguro</span>
               <span>•</span>
               <span><i class="fas fa-bolt"></i> Acesso imediato</span>
+            </div>
+
+            <div class="purchase-toast" id="purchase-toast" aria-live="polite" aria-hidden="true">
+              <button class="toast-close" type="button" aria-label="Fechar">&times;</button>
+              <strong id="purchase-toast-name">Joao Pedro assinou</strong>
+              <em id="purchase-toast-plan">3 Meses</em>
+              <span id="purchase-toast-time">ha 3 minutos</span>
             </div>
 
             <button class="promo-toggle" type="button" aria-expanded="true">
@@ -181,12 +188,6 @@
             </div>
           </section>
 
-          <div class="purchase-toast" id="purchase-toast" aria-live="polite" aria-hidden="true">
-            <button class="toast-close" type="button" aria-label="Fechar">×</button>
-            <strong id="purchase-toast-name">João Pedro assinou</strong>
-            <span>há 3 minutos</span>
-          </div>
-
           <nav class="profile-tabs" aria-label="Conteúdos">
             <span>502 Posts</span>
             <b>•</b>
@@ -199,11 +200,64 @@
             <article class="feed-media">
               <div class="feed-author">
                 <img src="/nicolle/images/perfildebaixo.jpg" alt="" />
-                <span>Nicolle Caroline</span>
+                <div>
+                  <strong>Nicolle Caroline</strong>
+                  <span>@niic.ca</span>
+                </div>
               </div>
               <div class="locked-frame">
                 <video src="/nicolle/media/videomelmaia03.mp4" autoplay muted loop playsinline preload="auto"></video>
                 <span class="lock-badge"><i class="fas fa-lock"></i></span>
+                <div class="media-engagement" aria-label="67.4K likes e 1.9K comentários">
+                  <span><i class="far fa-heart"></i> 67.4K</span>
+                  <span><i class="far fa-comment"></i> 1.9K</span>
+                </div>
+              </div>
+              <div class="feed-actions" aria-hidden="true">
+                <i class="far fa-heart"></i>
+                <i class="far fa-comment"></i>
+                <i class="far fa-bookmark"></i>
+              </div>
+            </article>
+
+            <article class="feed-media">
+              <div class="feed-author">
+                <img src="/nicolle/images/perfildebaixo.jpg" alt="" />
+                <div>
+                  <strong>Nicolle Caroline</strong>
+                  <span>@niic.ca</span>
+                </div>
+              </div>
+              <div class="locked-frame">
+                <img src="/nicolle/images/imagem1.png" alt="" />
+                <span class="lock-badge"><i class="fas fa-lock"></i></span>
+                <div class="media-engagement" aria-label="89.6K likes e 7.1K comentários">
+                  <span><i class="far fa-heart"></i> 89.6K</span>
+                  <span><i class="far fa-comment"></i> 7.1K</span>
+                </div>
+              </div>
+              <div class="feed-actions" aria-hidden="true">
+                <i class="far fa-heart"></i>
+                <i class="far fa-comment"></i>
+                <i class="far fa-bookmark"></i>
+              </div>
+            </article>
+
+            <article class="feed-media">
+              <div class="feed-author">
+                <img src="/nicolle/images/perfildebaixo.jpg" alt="" />
+                <div>
+                  <strong>Nicolle Caroline</strong>
+                  <span>@niic.ca</span>
+                </div>
+              </div>
+              <div class="locked-frame">
+                <img src="/assets/feed-third-reference.png" alt="" />
+                <span class="lock-badge"><i class="fas fa-lock"></i></span>
+                <div class="media-engagement" aria-label="55.3K likes e 8.4K comentários">
+                  <span><i class="far fa-heart"></i> 55.3K</span>
+                  <span><i class="far fa-comment"></i> 8.4K</span>
+                </div>
               </div>
               <div class="feed-actions" aria-hidden="true">
                 <i class="far fa-heart"></i>
@@ -242,6 +296,18 @@
               </details>
             </div>
           </section>
+
+          <button
+            class="footer-cta open-checkout"
+            type="button"
+            data-plan-id="15d"
+            data-plan-label="15 Dias"
+            data-plan-price="17.99"
+          >
+            <span>Veja tudo por apenas</span>
+            <strong>R$ 17,99</strong>
+            <i class="fas fa-arrow-right" aria-hidden="true"></i>
+          </button>
         </section>
       </main>
 

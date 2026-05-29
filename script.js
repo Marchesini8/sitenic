@@ -6,6 +6,7 @@ const ageConfirm = document.querySelector("#age-confirm");
 const siteShell = document.querySelector("#site-shell");
 const promoToggle = document.querySelector(".promo-toggle");
 const planList = document.querySelector("#plan-list");
+const bioBlock = document.querySelector(".bio-block");
 const bioText = document.querySelector("#bioText");
 const bioToggle = document.querySelector("#bioToggle");
 const previewVideos = document.querySelectorAll(".content-preview video");
@@ -22,6 +23,8 @@ const checkPaymentButton = document.querySelector(".check-payment-button");
 const deliveryStatus = document.querySelector("#delivery-status");
 const purchaseToast = document.querySelector("#purchase-toast");
 const purchaseToastName = document.querySelector("#purchase-toast-name");
+const purchaseToastPlan = document.querySelector("#purchase-toast-plan");
+const purchaseToastTime = document.querySelector("#purchase-toast-time");
 const purchaseToastClose = document.querySelector(".toast-close");
 const upsellModal = document.querySelector("#upsell-modal");
 const upsellModalCloseButtons = document.querySelectorAll("#upsell-modal .modal-close");
@@ -57,6 +60,8 @@ let selectedPlan = {
   price: 17.99,
 };
 let checkoutOfferAccepted = false;
+let purchaseToastTimer = null;
+let purchaseToastInterval = null;
 
 const checkoutOffer = {
   id: "ofertao",
@@ -83,7 +88,7 @@ const purchaseToastMessages = [
   "Felipe Rocha assinou 30 Dias",
   "Gabriel Souza assinou 3 Meses",
 ];
-const purchaseToastTimes = ["ha 3 minutos", "ha 5 minutos", "ha 8 minutos", "ha 11 minutos"];
+const purchaseToastTimes = ["ha 2 minutos", "ha 3 minutos", "ha 5 minutos"];
 let purchaseToastIndex = 0;
 
 function playPreviewVideos() {
@@ -371,23 +376,46 @@ function clearActiveOrder() {
 }
 
 function showPurchaseToast() {
-  if (!purchaseToast || !purchaseToastName) return;
+  if (!purchaseToast || !purchaseToastName || document.body.classList.contains("age-locked")) return;
 
   const randomOffset = Math.floor(Math.random() * purchaseToastMessages.length);
-  purchaseToastName.textContent = purchaseToastMessages[
-    (purchaseToastIndex + randomOffset) % purchaseToastMessages.length
-  ];
-  const timeText = purchaseToast.querySelector("span");
-  if (timeText) {
-    timeText.textContent = purchaseToastTimes[purchaseToastIndex % purchaseToastTimes.length];
+  const message = purchaseToastMessages[(purchaseToastIndex + randomOffset) % purchaseToastMessages.length];
+  const match = message.match(/^(.*?) assinou (.+)$/);
+  purchaseToastName.textContent = match ? `${match[1]} assinou` : message;
+  if (purchaseToastPlan) {
+    purchaseToastPlan.textContent = match ? match[2] : "";
+  }
+  if (purchaseToastTime) {
+    const randomTimeIndex = Math.floor(Math.random() * purchaseToastTimes.length);
+    purchaseToastTime.textContent = purchaseToastTimes[randomTimeIndex];
   }
   purchaseToastIndex += 1;
   purchaseToast.classList.remove("is-visible");
+  purchaseToast.classList.remove("is-closing");
   purchaseToast.setAttribute("aria-hidden", "false");
+  void purchaseToast.offsetWidth;
 
   window.requestAnimationFrame(() => {
     purchaseToast.classList.add("is-visible");
   });
+}
+
+function startPurchaseToastLoop() {
+  if (!purchaseToast || purchaseToastTimer || purchaseToastInterval) return;
+
+  purchaseToastTimer = window.setTimeout(showPurchaseToast, 900);
+  purchaseToastInterval = window.setInterval(showPurchaseToast, 5000);
+}
+
+function closePurchaseToast() {
+  if (!purchaseToast) return;
+
+  purchaseToast.classList.remove("is-visible");
+  purchaseToast.classList.add("is-closing");
+  window.setTimeout(() => {
+    purchaseToast.classList.remove("is-closing");
+    purchaseToast.setAttribute("aria-hidden", "true");
+  }, 360);
 }
 
 function onlyDigits(value = "") {
@@ -721,6 +749,7 @@ function unlockAgeGate() {
   siteShell?.classList.add("is-ready");
   siteShell?.setAttribute("aria-hidden", "false");
   document.body.classList.remove("age-locked");
+  startPurchaseToastLoop();
   window.setTimeout(() => {
     if (ageGate) ageGate.style.display = "none";
   }, 420);
@@ -730,6 +759,7 @@ ageConfirm?.addEventListener("click", unlockAgeGate);
 
 bioToggle?.addEventListener("click", () => {
   const isExpanded = bioText?.classList.toggle("expanded");
+  bioBlock?.classList.toggle("is-collapsed", !isExpanded);
   bioToggle.textContent = isExpanded ? "Mostrar menos" : "Mostrar mais";
 });
 
@@ -752,10 +782,11 @@ if (previewVideos.length) {
   document.addEventListener("keydown", playPreviewVideos, { once: true, capture: true });
 }
 
-window.setTimeout(showPurchaseToast, 1600);
-window.setInterval(showPurchaseToast, 5000);
+if (!document.body.classList.contains("age-locked")) {
+  startPurchaseToastLoop();
+}
 purchaseToastClose?.addEventListener("click", () => {
-  purchaseToast?.classList.remove("is-visible");
+  closePurchaseToast();
 });
 
 upsellModalCloseButtons.forEach((button) => {
