@@ -29,7 +29,6 @@ const purchaseToastClose = document.querySelector(".toast-close");
 const upsellModal = document.querySelector("#upsell-modal");
 const upsellModalCloseButtons = document.querySelectorAll("#upsell-modal .modal-close");
 const upsellAcceptButton = document.querySelector(".upsell-accept");
-const upsellDeclineButton = document.querySelector(".upsell-decline");
 const selectedPlanIdInput = document.querySelector("#selected-plan-id");
 const selectedPlanLabel = document.querySelector("#selected-plan-label");
 const selectedPlanPrice = document.querySelector("#selected-plan-price");
@@ -62,6 +61,7 @@ let selectedPlan = {
 let checkoutOfferAccepted = false;
 let purchaseToastTimer = null;
 let purchaseToastInterval = null;
+let pixCopyToastTimer = null;
 
 const checkoutOffer = {
   id: "ofertao",
@@ -603,6 +603,27 @@ function closePurchaseToast() {
   }, 360);
 }
 
+function showPixCopyToast() {
+  let toast = document.querySelector(".pix-copy-toast");
+
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.className = "pix-copy-toast";
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    document.body.appendChild(toast);
+  }
+
+  toast.textContent = "Copiado com sucesso";
+  toast.classList.remove("is-leaving");
+  toast.classList.add("is-visible");
+  window.clearTimeout(pixCopyToastTimer);
+  pixCopyToastTimer = window.setTimeout(() => {
+    toast.classList.add("is-leaving");
+    toast.classList.remove("is-visible");
+  }, 1300);
+}
+
 function onlyDigits(value = "") {
   return String(value).replace(/\D/g, "");
 }
@@ -978,8 +999,6 @@ upsellModalCloseButtons.forEach((button) => {
   button.addEventListener("click", closeUpsellOffer);
 });
 
-upsellDeclineButton?.addEventListener("click", closeUpsellOffer);
-
 upsellAcceptButton?.addEventListener("click", () => {
   closeUpsellOffer();
   openCheckout({
@@ -1148,10 +1167,7 @@ copyPixButton?.addEventListener("click", async () => {
     document.execCommand("copy");
   }
 
-  copyPixButton.textContent = "Codigo copiado";
-  window.setTimeout(() => {
-    copyPixButton.textContent = "Copiar codigo Pix";
-  }, 1600);
+  showPixCopyToast();
 });
 
 checkPaymentButton?.addEventListener("click", () => {

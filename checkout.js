@@ -35,11 +35,17 @@ const plans = {
     period: "6 Meses",
     price: 87.9,
   },
+  "upsell-6m": {
+    label: "6 Meses",
+    period: "6 Meses",
+    price: 19.9,
+  },
 };
 
 let currentOrderId = null;
 let currentTransactionHash = null;
 let pollTimer = null;
+let pixCopyToastTimer = null;
 let selectedPlanId = new URLSearchParams(window.location.search).get("planId") || "15d";
 let selectedPlan = plans[selectedPlanId] || plans["15d"];
 if (!plans[selectedPlanId]) selectedPlanId = "15d";
@@ -92,6 +98,49 @@ function setFeedback(message = "", type = "info") {
   checkoutFeedback.dataset.type = type;
 }
 
+function setDeliveryStatus(message = "", type = "info") {
+  if (!checkoutDeliveryStatus) return;
+  checkoutDeliveryStatus.textContent = message;
+  checkoutDeliveryStatus.dataset.type = type;
+}
+
+async function copyPixCode() {
+  const code = checkoutPixCode?.value || "";
+  if (!code) return false;
+
+  try {
+    await navigator.clipboard.writeText(code);
+  } catch {
+    checkoutPixCode.select();
+    document.execCommand("copy");
+  }
+
+  checkoutPixCode.blur();
+  return true;
+}
+
+function showPixCopyToast() {
+  const toastHost = pixResultPage || document.body;
+  let toast = toastHost.querySelector(".pix-copy-toast");
+
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.className = "pix-copy-toast";
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    toastHost.appendChild(toast);
+  }
+
+  toast.textContent = "Copiado com sucesso";
+  toast.classList.remove("is-leaving");
+  toast.classList.add("is-visible");
+  window.clearTimeout(pixCopyToastTimer);
+  pixCopyToastTimer = window.setTimeout(() => {
+    toast.classList.add("is-leaving");
+    toast.classList.remove("is-visible");
+  }, 1300);
+}
+
 function buildQrCodeUrl(pixPayload = "") {
   if (!pixPayload) return "";
   return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=12&data=${encodeURIComponent(
@@ -131,6 +180,7 @@ function showPixResult(data = {}) {
   }
 
   pixResultPage.hidden = false;
+  generatePixButton?.classList.add("is-hidden");
   window.requestAnimationFrame(() => {
     const targetTop = pixResultPage.getBoundingClientRect().top + window.scrollY - 12;
     window.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
@@ -168,19 +218,21 @@ async function checkOrderStatus() {
   if (data.isPaid) {
     window.clearInterval(pollTimer);
     pollTimer = null;
-    checkoutDeliveryStatus.textContent = "Pagamento confirmado. Seu acesso foi liberado.";
+    setDeliveryStatus("Pagamento confirmado. Seu acesso foi liberado.", "success");
     return;
   }
 
-  checkoutDeliveryStatus.textContent =
-    "Pagamento ainda pendente. Depois de pagar, a confirmação pode levar alguns instantes.";
+  setDeliveryStatus(
+    "Pagamento ainda pendente. Depois de pagar, a confirmacao pode levar alguns instantes.",
+    "pending"
+  );
 }
 
 function startPolling() {
   window.clearInterval(pollTimer);
   pollTimer = window.setInterval(() => {
     checkOrderStatus().catch((error) => {
-      checkoutDeliveryStatus.textContent = error.message;
+      setDeliveryStatus(error.message, "error");
     });
   }, 5000);
 }
@@ -189,9 +241,11 @@ addonInputs.forEach((input) => {
   input.addEventListener("change", () => {
     updateTotal();
     pixResultPage.hidden = true;
+    generatePixButton?.classList.remove("is-hidden");
     currentOrderId = null;
     currentTransactionHash = null;
     setFeedback("");
+    setDeliveryStatus("");
   });
 });
 
@@ -205,7 +259,7 @@ checkoutForm?.addEventListener("submit", async (event) => {
   generatePixButton.disabled = true;
   generatePixButton.textContent = "GERANDO PIX...";
   setFeedback("");
-  if (checkoutDeliveryStatus) checkoutDeliveryStatus.textContent = "";
+  setDeliveryStatus("");
 
   try {
     const response = await fetch("/api/payments/checkout", {
@@ -236,12 +290,16 @@ checkoutForm?.addEventListener("submit", async (event) => {
     currentTransactionHash = data.transaction_hash;
     showPixResult(data);
     setFeedback("Pix gerado. Pague usando o QR Code ou o código copia e cola.", "success");
-    checkoutDeliveryStatus.textContent = currentTransactionHash
+    setDeliveryStatus(
+      currentTransactionHash
       ? "Aguardando confirmação do pagamento."
-      : "Pix gerado. Depois de pagar, clique em verificar pagamento.";
+      : "Pix gerado. Depois de pagar, clique em verificar pagamento.",
+      "info"
+    );
     startPolling();
   } catch (error) {
     setFeedback(error.message, "error");
+    generatePixButton?.classList.remove("is-hidden");
   } finally {
     generatePixButton.disabled = false;
     updateTotal();
@@ -249,25 +307,23 @@ checkoutForm?.addEventListener("submit", async (event) => {
 });
 
 copyPixPageButton?.addEventListener("click", async () => {
-  const code = checkoutPixCode?.value || "";
-  if (!code) return;
+  const wasCopied = await copyPixCode();
+  if (!wasCopied) return;
 
-  try {
-    await navigator.clipboard.writeText(code);
-  } catch {
-    checkoutPixCode.select();
-    document.execCommand("copy");
-  }
+  showPixCopyToast();
+});
 
-  copyPixPageButton.textContent = "Código copiado";
-  window.setTimeout(() => {
-    copyPixPageButton.textContent = "Copiar código Pix";
-  }, 1600);
+checkoutPixCode?.addEventListener("pointerdown", async (event) => {
+  event.preventDefault();
+  const wasCopied = await copyPixCode();
+  if (!wasCopied) return;
+
+  showPixCopyToast();
 });
 
 checkPaymentPageButton?.addEventListener("click", () => {
   checkOrderStatus().catch((error) => {
-    checkoutDeliveryStatus.textContent = error.message;
+    setDeliveryStatus(error.message, "error");
   });
 });
 

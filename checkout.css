@@ -20,6 +20,34 @@ body {
   animation: checkoutPageIn 0.48s ease both;
 }
 
+.pix-copy-toast {
+  position: absolute;
+  left: 50%;
+  top: -42px;
+  z-index: 100000;
+  padding: 5px 9px;
+  border-radius: 2px;
+  background: rgba(53, 40, 21, 0.96);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.1;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -8px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+
+.pix-copy-toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.pix-copy-toast.is-leaving {
+  opacity: 0;
+  transform: translate(-50%, -8px);
+}
+
 button,
 input,
 textarea {
@@ -187,6 +215,10 @@ input:not([type="checkbox"]):focus,
 textarea:focus {
   border-color: var(--orange);
   box-shadow: 0 0 0 3px rgba(255, 90, 31, 0.12);
+}
+
+#checkout-pix-code {
+  cursor: pointer;
 }
 
 .pix-method {
@@ -488,6 +520,10 @@ textarea:focus {
   transform: none;
 }
 
+.generate-pix.is-hidden {
+  display: none;
+}
+
 .checkout-feedback {
   min-height: 22px;
   margin: -10px 0 0;
@@ -500,6 +536,7 @@ textarea:focus {
 }
 
 .pix-result-page {
+  position: relative;
   display: grid;
   gap: 15px;
   padding: 20px;
@@ -547,9 +584,29 @@ textarea:focus {
   cursor: pointer;
 }
 
+.pix-page-actions .check-payment-page {
+  border-color: var(--orange);
+  background: var(--orange);
+  color: #fff;
+}
+
+.pix-page-actions .check-payment-page:hover {
+  border-color: var(--orange-dark);
+  background: var(--orange-dark);
+}
+
 .checkout-delivery-status {
-  color: #0a9c58;
+  color: #24304a;
   font-weight: 800;
+}
+
+.checkout-delivery-status[data-type="success"] {
+  color: #0a9c58;
+}
+
+.checkout-delivery-status[data-type="pending"],
+.checkout-delivery-status[data-type="error"] {
+  color: #d92d20;
 }
 
 .trust-sidebar {

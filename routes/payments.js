@@ -43,7 +43,7 @@ const CHECKOUT_ADDONS = {
     price: 26.9,
   },
   ruivinha: {
-    label: "Privacy Ruivinha de Marte",
+    label: "Privacy MC MIERLA",
     price: 11.9,
   },
   mel: {
