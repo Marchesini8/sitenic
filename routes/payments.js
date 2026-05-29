@@ -9,7 +9,7 @@ const pendingCheckoutRequests = new Map();
 const SUBSCRIPTION_PLANS = {
   "15d": {
     label: "15 Dias",
-    price: 19.99,
+    price: 17.99,
   },
   "30d": {
     label: "30 Dias",
@@ -26,6 +26,29 @@ const SUBSCRIPTION_PLANS = {
   "upsell-6m": {
     label: "6 Meses",
     price: 19.9,
+  },
+};
+
+const CHECKOUT_ADDONS = {
+  ofertao: {
+    label: "Oferta exclusiva",
+    price: 19.9,
+  },
+  vip: {
+    label: "Vip Exclusivo",
+    price: 7.9,
+  },
+  whatsapp: {
+    label: "WhatsApp pessoal",
+    price: 26.9,
+  },
+  ruivinha: {
+    label: "Privacy Ruivinha de Marte",
+    price: 11.9,
+  },
+  mel: {
+    label: "Privacy Mel Maia",
+    price: 9.9,
   },
 };
 
@@ -63,6 +86,32 @@ function getSelectedPlan(planId) {
   return SUBSCRIPTION_PLANS[planId] || SUBSCRIPTION_PLANS["15d"];
 }
 
+function getSelectedAddons(body = {}) {
+  if (Array.isArray(body.addons)) {
+    return body.addons
+      .map((addonId) => String(addonId || "").trim())
+      .filter((addonId, index, addonIds) => CHECKOUT_ADDONS[addonId] && addonIds.indexOf(addonId) === index)
+      .map((addonId) => ({
+        id: addonId,
+        ...CHECKOUT_ADDONS[addonId],
+      }));
+  }
+
+  const offerAccepted = body.offerAccepted === true || body.offerAccepted === "true";
+  return offerAccepted
+    ? [
+        {
+          id: "ofertao",
+          ...CHECKOUT_ADDONS.ofertao,
+        },
+      ]
+    : [];
+}
+
+function toCents(value) {
+  return Math.round(Number(value || 0) * 100);
+}
+
 function getCheckoutRequestKey({ customer, planId }) {
   return [String(customer.email || "").trim().toLowerCase(), planId || "15d"].join("|");
 }
@@ -86,13 +135,19 @@ router.post("/checkout", async (req, res) => {
 
     const selectedPlan = getSelectedPlan(planId);
     const normalizedPlanId = SUBSCRIPTION_PLANS[planId] ? planId : "15d";
+    const selectedAddons = getSelectedAddons(req.body);
+    const addonKey = selectedAddons.map((addon) => addon.id).sort().join(",");
+    const selectedTotalInCents =
+      toCents(selectedPlan.price) + selectedAddons.reduce((sum, addon) => sum + toCents(addon.price), 0);
+    const selectedTotal = selectedTotalInCents / 100;
     const recentPendingOrder = orderStore.findRecentPendingOrder({
       email: normalizedCustomer.email,
       planId: normalizedPlanId,
     });
 
     const recentPendingOrderHasCurrentPrice =
-      Number(recentPendingOrder?.item?.price || 0) === selectedPlan.price;
+      toCents(recentPendingOrder?.item?.price) === selectedTotalInCents &&
+      String(recentPendingOrder?.item?.addonKey || "") === addonKey;
 
     if (recentPendingOrder?.pixCode && recentPendingOrderHasCurrentPrice) {
       return res.json({
@@ -100,8 +155,8 @@ router.post("/checkout", async (req, res) => {
         status: recentPendingOrder.status || "pending",
         pix_code: recentPendingOrder.pixCode,
         pix_base64: "",
-        charged_total: recentPendingOrder.item?.price || selectedPlan.price,
-        product_total: recentPendingOrder.item?.price || selectedPlan.price,
+        charged_total: recentPendingOrder.item?.price || selectedTotal,
+        product_total: recentPendingOrder.item?.price || selectedTotal,
         shipping_total: 0,
         source: "ironpay",
         order_id: recentPendingOrder.id,
@@ -111,20 +166,32 @@ router.post("/checkout", async (req, res) => {
     }
 
     const productName = `${process.env.PRODUCT_NAME || "Acesso Premium Nicolle"} - ${selectedPlan.label}`;
-    const item = {
+    const paymentItem = {
       title: productName,
-      price: selectedPlan.price,
+      price: selectedTotal,
       quantity: 1,
       planId: normalizedPlanId,
     };
+    const item = {
+      title: productName,
+      price: selectedTotal,
+      quantity: 1,
+      planId: normalizedPlanId,
+      addons: selectedAddons,
+      addonKey,
+      offerAccepted: selectedAddons.length > 0,
+    };
 
-    const checkoutKey = getCheckoutRequestKey({ customer: normalizedCustomer, planId: normalizedPlanId });
+    const checkoutKey = getCheckoutRequestKey({
+      customer: normalizedCustomer,
+      planId: `${normalizedPlanId}:${addonKey || "base"}`,
+    });
     let checkoutPromise = pendingCheckoutRequests.get(checkoutKey);
 
     if (!checkoutPromise) {
       checkoutPromise = (async () => {
         const payment = await paymentService.createPixPayment({
-          items: [item],
+          items: [paymentItem],
           customer: normalizedCustomer,
           delivery: {},
           tracking,

@@ -70,7 +70,7 @@
       <div class="promo-bar" id="promo-validity">ESSA PROMOÇÃO É VÁLIDA ATÉ 26/05/2026</div>
 
       <header class="top-logo">
-        <img src="/nicolle/images/privacy-logo-reference.png" alt="Privacy" />
+        <img src="/assets/privacy-logo-cropped.png" alt="Privacy" />
       </header>
 
       <main class="profile-page">
@@ -124,12 +124,12 @@
               type="button"
               data-plan-id="15d"
               data-plan-label="15 Dias"
-              data-plan-price="19.99"
+              data-plan-price="17.99"
             >
               <strong>15 Dias</strong>
               <span>
-                <del class="price-old">R$ 65,90</del>
-                <strong class="price-new">R$ 19,99</strong>
+                <del class="price-old">R$ 45,90</del>
+                <strong class="price-new">R$ 17,99</strong>
                 <i class="fas fa-arrow-right"></i>
               </span>
             </button>
@@ -252,37 +252,76 @@
       </footer>
     </div>
 
-    <div class="modal" id="checkout-modal" aria-hidden="true">
-      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
+    <div class="modal checkout-modal" id="checkout-modal" aria-hidden="true">
+      <div class="modal-card checkout-card" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
         <button class="modal-close" aria-label="Fechar">×</button>
-        <div class="modal-header">
-          <img src="/nicolle/images/perfildebaixo.jpg" alt="Nicolle Caroline" />
-          <div>
-            <span class="eyebrow">Checkout seguro via Pix</span>
-            <h2 id="checkout-title">Assinar Nicolle Caroline</h2>
-            <p><span id="selected-plan-label">15 Dias</span> por <strong id="selected-plan-price">R$ 19,99</strong></p>
+        <div class="checkout-hero">
+          <img src="/nicolle/images/nicolepraia.jpg" alt="Nicolle Caroline" />
+          <div class="checkout-hero-overlay">
+            <span class="checkout-secure"><i class="fas fa-lock"></i> Checkout seguro</span>
+            <h2 id="checkout-title">Finalize seu acesso</h2>
+            <p>Nicolle Caroline</p>
           </div>
         </div>
 
-        <div class="delivery-email-notice" role="note">
-          <span aria-hidden="true">&#9993;</span>
-          <strong>O conte&uacute;do ser&aacute; entregue no e-mail informado abaixo.</strong>
-        </div>
+        <div class="checkout-body">
+          <div class="checkout-product">
+            <img src="/nicolle/images/perfildebaixo.jpg" alt="" />
+            <div>
+              <span>Assinatura selecionada</span>
+              <strong id="selected-plan-label">15 Dias</strong>
+            </div>
+            <b id="selected-plan-price">R$ 17,99</b>
+          </div>
 
-        <form id="checkout-form" class="checkout-form">
-          <input type="hidden" name="planId" id="selected-plan-id" value="15d" />
-          <label>
-            Nome completo
-            <input name="name" autocomplete="name" required placeholder="Seu nome" />
-          </label>
-          <label>
-            E-mail
-            <input name="email" type="email" autocomplete="email" required placeholder="voce@email.com" />
-          </label>
-          <input type="hidden" name="deliveryPreference" value="email" />
-          <button class="button full submit-payment" type="submit">Gerar Pix de R$ 19,99</button>
-          <p class="form-feedback" id="payment-feedback" role="status"></p>
-        </form>
+          <section class="checkout-offer" aria-labelledby="checkout-offer-title">
+            <div class="checkout-offer-copy">
+              <span class="offer-badge">Oferta exclusiva</span>
+              <h3 id="checkout-offer-title">Adicionar pack completo por + R$ 19,90?</h3>
+              <p>Acesso estendido com conteudos extras liberados junto com a assinatura.</p>
+            </div>
+            <div class="checkout-offer-actions" role="group" aria-label="Adicionar oferta ao checkout">
+              <button class="offer-choice is-selected" type="button" data-offer-choice="no">Nao</button>
+              <button class="offer-choice" type="button" data-offer-choice="yes">Sim</button>
+            </div>
+          </section>
+
+          <div class="checkout-summary" aria-label="Resumo do pedido">
+            <div>
+              <span id="summary-plan-label">15 Dias</span>
+              <strong id="summary-plan-price">R$ 17,99</strong>
+            </div>
+            <div class="summary-offer-row" id="summary-offer-row" hidden>
+              <span>Oferta exclusiva</span>
+              <strong id="summary-offer-price">R$ 19,90</strong>
+            </div>
+            <div class="summary-total">
+              <span>Total</span>
+              <strong id="checkout-total-price">R$ 17,99</strong>
+            </div>
+          </div>
+
+          <div class="delivery-email-notice" role="note">
+            <span aria-hidden="true">&#9993;</span>
+            <strong>O conte&uacute;do ser&aacute; entregue no e-mail informado abaixo.</strong>
+          </div>
+
+          <form id="checkout-form" class="checkout-form">
+            <input type="hidden" name="planId" id="selected-plan-id" value="15d" />
+            <input type="hidden" name="offerAccepted" id="checkout-offer-accepted" value="false" />
+            <label>
+              Nome completo
+              <input name="name" autocomplete="name" required placeholder="Seu nome" />
+            </label>
+            <label>
+              E-mail
+              <input name="email" type="email" autocomplete="email" required placeholder="voce@email.com" />
+            </label>
+            <input type="hidden" name="deliveryPreference" value="email" />
+            <button class="button full submit-payment" type="submit">Gerar Pix de R$ 17,99</button>
+            <p class="form-feedback" id="payment-feedback" role="status"></p>
+          </form>
+        </div>
 
         <section class="pix-result" id="pix-result" aria-hidden="true" hidden>
           <div class="qr-box">

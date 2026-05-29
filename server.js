@@ -29,6 +29,14 @@ app.get("/script.js", (req, res) => {
   res.sendFile(path.join(__dirname, "script.js"));
 });
 
+app.get("/checkout.css", (req, res) => {
+  res.sendFile(path.join(__dirname, "checkout.css"));
+});
+
+app.get("/checkout.js", (req, res) => {
+  res.sendFile(path.join(__dirname, "checkout.js"));
+});
+
 app.use("/api/payments", paymentRoutes);
 app.use("/api/webhooks", webhookRoutes);
 app.use("/", webhookRoutes);
@@ -44,6 +52,10 @@ app.get("/health", (req, res) => {
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
+});
+
+app.get("/checkout.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "checkout.html"));
 });
 
 app.listen(port, host, () => {

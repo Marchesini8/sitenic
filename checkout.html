@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Checkout Seguro - Privacy</title>
+    <meta name="description" content="Checkout seguro via Pix para finalizar seu acesso Privacy." />
+    <link rel="stylesheet" href="/nicolle/css/all.min.css" />
+    <link rel="stylesheet" href="/checkout.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header class="checkout-topbar">
+      <i class="fas fa-shield-alt" aria-hidden="true"></i>
+      <span>PAGAMENTO 100% SEGURO</span>
+    </header>
+
+    <main class="checkout-shell">
+      <section class="secure-banner" aria-label="Compra segura Privacy">
+        <img src="/assets/checkout/privacy-secure-banner.png" alt="Compra 100% segura Privacy" />
+      </section>
+
+      <div class="checkout-grid">
+        <div class="checkout-main">
+          <form id="checkout-page-form">
+            <section class="checkout-panel">
+              <div class="section-title">
+                <span>1</span>
+                <h1>Identifique-se</h1>
+              </div>
+              <div class="access-email-alert" role="note">
+                <i class="fas fa-envelope" aria-hidden="true"></i>
+                <strong>Os dados de acesso serão enviados para o e-mail informado abaixo.</strong>
+              </div>
+              <label>
+                Nome completo
+                <input name="name" autocomplete="name" required placeholder="Identifique-se com o seu nome" />
+              </label>
+              <label>
+                E-mail
+                <input name="email" type="email" autocomplete="email" required placeholder="seu@email.com" />
+              </label>
+            </section>
+
+            <section class="checkout-panel payment-panel">
+              <div class="section-title">
+                <span>2</span>
+                <div>
+                  <h2>Pagamento</h2>
+                  <p>Escolha o seu método de pagamento preferido</p>
+                </div>
+              </div>
+
+              <div class="pix-method" aria-label="Pagamento via Pix selecionado">
+                <div class="pix-method-head">
+                  <span class="radio-dot"></span>
+                  <img class="pix-symbol" src="/assets/checkout/pix-symbol.png" alt="" />
+                  <strong>Pix</strong>
+                  <em>Aprovação imediata</em>
+                </div>
+                <div class="pix-copy">
+                  <p>- Liberação imediata!</p>
+                  <p>- É simples, basta usar o aplicativo do seu banco para pagar com Pix.</p>
+                  <p>- Super seguro. O pagamento Pix foi desenvolvido pelo Banco Central para facilitar pagamentos.</p>
+                </div>
+              </div>
+
+              <div class="product-box">
+                <p>Você está adquirindo:</p>
+                <div class="product-row">
+                  <img src="/nicolle/images/perfildebaixo.jpg" alt="" />
+                  <div>
+                    <strong id="checkout-plan-label">Privacy Nicolle Caroline</strong>
+                    <span id="checkout-plan-price">R$ 17,99</span>
+                  </div>
+                </div>
+              </div>
+
+              <section class="bump-box" aria-labelledby="bump-title">
+                <h3 id="bump-title">Você tem 4 ofertas adicionais</h3>
+
+                <label class="bump-item">
+                  <input type="checkbox" name="addons" value="vip" data-price="7.90" />
+                  <img src="/assets/checkout/vip-exclusivo.png" alt="" />
+                  <span class="bump-content">
+                    <strong>Vip Exclusivo</strong>
+                    <small>Apenas assinantes e minhas amigas</small>
+                    <b>R$ 7,90</b>
+                    <em><i class="fas fa-arrow-right"></i> Sim, eu aceito essa oferta</em>
+                  </span>
+                </label>
+
+                <label class="bump-item">
+                  <input type="checkbox" name="addons" value="whatsapp" data-price="26.90" />
+                  <img src="/assets/checkout/whatsapp.png" alt="" />
+                  <span class="bump-content">
+                    <strong>WhatsApp pessoal</strong>
+                    <small>Tenha acesso ao meu WhatsApp pessoal e muito mais!</small>
+                    <b>R$ 26,90</b>
+                    <em><i class="fas fa-arrow-right"></i> Sim, eu aceito essa oferta</em>
+                  </span>
+                </label>
+
+                <label class="bump-item">
+                  <input type="checkbox" name="addons" value="ruivinha" data-price="11.90" />
+                  <img src="/assets/checkout/ruivinha-de-marte.jpg" alt="" />
+                  <span class="bump-content">
+                    <strong>Privacy Ruivinha de Marte</strong>
+                    <b>R$ 11,90</b>
+                    <em><i class="fas fa-arrow-right"></i> Sim, eu aceito essa oferta</em>
+                  </span>
+                </label>
+
+                <label class="bump-item">
+                  <input type="checkbox" name="addons" value="mel" data-price="9.90" />
+                  <img src="/assets/checkout/mel-maia.png" alt="" />
+                  <span class="bump-content">
+                    <strong>Privacy Mel Maia</strong>
+                    <b>R$ 9,90</b>
+                    <em><i class="fas fa-arrow-right"></i> Sim, eu aceito essa oferta</em>
+                  </span>
+                </label>
+              </section>
+
+              <div class="checkout-total">
+                <strong>Total:</strong>
+                <b id="checkout-total">R$ 17,99</b>
+              </div>
+            </section>
+
+            <button class="generate-pix" type="submit">GERAR PIX</button>
+            <p class="checkout-feedback" id="checkout-feedback" role="status"></p>
+          </form>
+
+          <section class="pix-result-page" id="pix-result-page" hidden>
+            <div class="qr-box-page">
+              <img id="checkout-pix-qr" alt="QR Code Pix" />
+              <span id="checkout-pix-empty">QR Code indisponível. Use o código Pix copia e cola.</span>
+            </div>
+            <label>
+              Código Pix copia e cola
+              <textarea id="checkout-pix-code" readonly rows="4"></textarea>
+            </label>
+            <div class="pix-page-actions">
+              <button class="copy-pix-page" type="button">Copiar código Pix</button>
+              <button class="check-payment-page" type="button">Verificar pagamento</button>
+            </div>
+            <div class="checkout-delivery-status" id="checkout-delivery-status" role="status"></div>
+          </section>
+        </div>
+
+        <aside class="trust-sidebar" aria-label="Garantias">
+          <article>
+            <i class="fas fa-shield-alt" aria-hidden="true"></i>
+            <div>
+              <strong>Dados protegidos</strong>
+              <p>Os seus dados são confidenciais e seguros</p>
+            </div>
+          </article>
+          <article>
+            <i class="fas fa-shield-alt" aria-hidden="true"></i>
+            <div>
+              <strong>Pagamento 100% Seguro</strong>
+              <p>As informações desta compra são criptografadas</p>
+            </div>
+          </article>
+          <article>
+            <i class="fas fa-check" aria-hidden="true"></i>
+            <div>
+              <strong>Conteúdo aprovado</strong>
+              <p>100% revisado e aprovado por profissionais</p>
+            </div>
+          </article>
+          <article>
+            <i class="fas fa-shield-alt" aria-hidden="true"></i>
+            <div>
+              <strong>Garantia de 7 dias</strong>
+              <p>Você está protegido por uma garantia de satisfação</p>
+            </div>
+          </article>
+        </aside>
+      </div>
+    </main>
+
+    <script src="/checkout.js"></script>
+  </body>
+</html>

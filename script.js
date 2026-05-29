@@ -30,6 +30,13 @@ const upsellDeclineButton = document.querySelector(".upsell-decline");
 const selectedPlanIdInput = document.querySelector("#selected-plan-id");
 const selectedPlanLabel = document.querySelector("#selected-plan-label");
 const selectedPlanPrice = document.querySelector("#selected-plan-price");
+const summaryPlanLabel = document.querySelector("#summary-plan-label");
+const summaryPlanPrice = document.querySelector("#summary-plan-price");
+const summaryOfferRow = document.querySelector("#summary-offer-row");
+const summaryOfferPrice = document.querySelector("#summary-offer-price");
+const checkoutTotalPrice = document.querySelector("#checkout-total-price");
+const checkoutOfferAcceptedInput = document.querySelector("#checkout-offer-accepted");
+const offerChoiceButtons = document.querySelectorAll("[data-offer-choice]");
 const submitPaymentButton = document.querySelector(".submit-payment");
 const promoValidity = document.querySelector("#promo-validity");
 
@@ -47,7 +54,14 @@ let lastPixSignature = "";
 let selectedPlan = {
   id: "15d",
   label: "15 Dias",
-  price: 19.99,
+  price: 17.99,
+};
+let checkoutOfferAccepted = false;
+
+const checkoutOffer = {
+  id: "ofertao",
+  label: "Oferta exclusiva",
+  price: 19.9,
 };
 
 const activeOrderStorageKey = "active_order";
@@ -55,20 +69,21 @@ const externalIdCookieName = "site_external_id";
 const trackingStorageKey = "checkout_tracking";
 const upsellStoragePrefix = "upsell_seen_";
 const purchaseToastMessages = [
-  "Gabriel acabou de assinar o acesso premium",
-  "Carlos Eduardo Oliveira acabou de assinar",
-  "Rafael acabou de liberar o conteudo premium",
-  "Lucas acabou de garantir o acesso premium",
-  "Bruno acabou de assinar agora",
-  "Thiago acabou de garantir o perfil premium",
-  "Mateus acabou de liberar o conteudo premium",
-  "Eduardo acabou de assinar o perfil",
-  "Joao Pedro acabou de assinar",
-  "Gustavo acabou de liberar o perfil",
-  "Henrique acabou de garantir o acesso",
-  "Felipe acabou de assinar agora",
-  "Andre acabou de liberar o conteudo premium",
+  "Andre Pereira assinou 3 Meses",
+  "Joao Carlos assinou 15 Dias",
+  "Carlos Henrique assinou 6 Meses",
+  "Julio Almeida assinou 3 Meses",
+  "Vinicius Campos assinou 30 Dias",
+  "Rafael Lima assinou 15 Dias",
+  "Lucas Martins assinou 6 Meses",
+  "Bruno Oliveira assinou 30 Dias",
+  "Thiago Pereira assinou 3 Meses",
+  "Mateus Santos assinou 15 Dias",
+  "Eduardo Costa assinou 6 Meses",
+  "Felipe Rocha assinou 30 Dias",
+  "Gabriel Souza assinou 3 Meses",
 ];
+const purchaseToastTimes = ["ha 3 minutos", "ha 5 minutos", "ha 8 minutos", "ha 11 minutos"];
 let purchaseToastIndex = 0;
 
 function playPreviewVideos() {
@@ -108,26 +123,37 @@ function updatePromoValidity() {
 }
 
 function getPixelProductParams(plan = selectedPlan) {
+  const total = getCheckoutTotal(plan);
+  const contents = [
+    {
+      id: `site-18-nicolle-premium-${plan.id}`,
+      quantity: 1,
+      item_price: plan.price,
+    },
+  ];
+
+  if (checkoutOfferAccepted) {
+    contents.push({
+      id: `site-18-nicolle-${checkoutOffer.id}`,
+      quantity: 1,
+      item_price: checkoutOffer.price,
+    });
+  }
+
   return {
-    content_name: `Acesso Premium Nicolle - ${plan.label}`,
+    content_name: `Acesso Premium Nicolle - ${plan.label}${checkoutOfferAccepted ? " + Oferta exclusiva" : ""}`,
     content_type: "product",
-    contents: [
-      {
-        id: `site-18-nicolle-premium-${plan.id}`,
-        quantity: 1,
-        item_price: plan.price,
-      },
-    ],
+    contents,
     content_ids: [`site-18-nicolle-premium-${plan.id}`],
     currency: "BRL",
-    value: plan.price,
+    value: total,
   };
 }
 
 function getPurchasePixelParams() {
   return {
     ...getPixelProductParams(),
-    value: selectedPlan.price,
+    value: getCheckoutTotal(),
     currency: "BRL",
   };
 }
@@ -314,8 +340,9 @@ function restoreActiveOrder() {
     if (saved.item?.id && saved.item?.label) {
       updateSelectedPlan(saved.item);
     }
+    setCheckoutOfferAccepted(Boolean(saved.offerAccepted || saved.item?.offerAccepted), { preserveOrder: true });
     if (saved.customer && saved.item?.id) {
-      lastPixSignature = [saved.item.id, saved.customer.name || "", saved.customer.email || ""]
+      lastPixSignature = [saved.item.id, saved.customer.name || "", saved.customer.email || "", checkoutOfferAccepted]
         .map((value) => String(value).trim().toLowerCase())
         .join("|");
     }
@@ -350,6 +377,10 @@ function showPurchaseToast() {
   purchaseToastName.textContent = purchaseToastMessages[
     (purchaseToastIndex + randomOffset) % purchaseToastMessages.length
   ];
+  const timeText = purchaseToast.querySelector("span");
+  if (timeText) {
+    timeText.textContent = purchaseToastTimes[purchaseToastIndex % purchaseToastTimes.length];
+  }
   purchaseToastIndex += 1;
   purchaseToast.classList.remove("is-visible");
   purchaseToast.setAttribute("aria-hidden", "false");
@@ -373,6 +404,54 @@ function formatPhone(value = "") {
   return digits.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3");
 }
 
+function getCheckoutTotal(plan = selectedPlan) {
+  const basePrice = Number(plan?.price || 0);
+  return basePrice + (checkoutOfferAccepted ? checkoutOffer.price : 0);
+}
+
+function updateCheckoutTotals() {
+  const total = getCheckoutTotal();
+
+  if (selectedPlanPrice) selectedPlanPrice.textContent = formatCurrency(selectedPlan.price);
+  if (summaryPlanLabel) summaryPlanLabel.textContent = selectedPlan.label;
+  if (summaryPlanPrice) summaryPlanPrice.textContent = formatCurrency(selectedPlan.price);
+  if (summaryOfferPrice) summaryOfferPrice.textContent = formatCurrency(checkoutOffer.price);
+  if (checkoutTotalPrice) checkoutTotalPrice.textContent = formatCurrency(total);
+
+  if (summaryOfferRow) {
+    summaryOfferRow.hidden = !checkoutOfferAccepted;
+  }
+
+  if (checkoutOfferAcceptedInput) {
+    checkoutOfferAcceptedInput.value = checkoutOfferAccepted ? "true" : "false";
+  }
+
+  offerChoiceButtons.forEach((button) => {
+    const isSelected = button.dataset.offerChoice === (checkoutOfferAccepted ? "yes" : "no");
+    button.classList.toggle("is-selected", isSelected);
+    button.setAttribute("aria-pressed", String(isSelected));
+  });
+}
+
+function setCheckoutOfferAccepted(value, options = {}) {
+  const { preserveOrder = false } = options;
+  const nextValue = Boolean(value);
+  const changed = nextValue !== checkoutOfferAccepted;
+  checkoutOfferAccepted = nextValue;
+  updateCheckoutTotals();
+  resetSubmitButton(submitPaymentButton);
+
+  if (changed && !preserveOrder) {
+    lastPixSignature = "";
+    hidePixResult({ clearCode: true });
+    if (currentOrderId) {
+      currentOrderId = null;
+      currentTransactionHash = null;
+      clearActiveOrder();
+    }
+  }
+}
+
 function updateSelectedPlan(plan = {}) {
   const price = Number(plan.price || plan.dataset?.planPrice || selectedPlan.price);
   const label = plan.label || plan.dataset?.planLabel || selectedPlan.label;
@@ -383,7 +462,7 @@ function updateSelectedPlan(plan = {}) {
 
   if (selectedPlanIdInput) selectedPlanIdInput.value = selectedPlan.id;
   if (selectedPlanLabel) selectedPlanLabel.textContent = selectedPlan.label;
-  if (selectedPlanPrice) selectedPlanPrice.textContent = formatCurrency(selectedPlan.price);
+  updateCheckoutTotals();
   if (planChanged) {
     lastPixSignature = "";
   }
@@ -421,11 +500,19 @@ function openCheckout(sourceButton, options = {}) {
     updateSelectedPlan(sourceButton);
   }
 
+  if (!document.body.classList.contains("checkout-page")) {
+    const params = new URLSearchParams(window.location.search);
+    params.set("planId", selectedPlan.id);
+    window.location.href = `/checkout.html?${params.toString()}`;
+    return;
+  }
+
   if (fresh) {
     currentOrderId = null;
     currentTransactionHash = null;
     clearActiveOrder();
     checkoutForm?.reset();
+    setCheckoutOfferAccepted(false);
     updateSelectedPlan(selectedPlan);
     resetCheckoutInteraction();
   }
@@ -531,7 +618,7 @@ function showPixResult() {
 function resetSubmitButton(button) {
   if (!button) return;
   button.disabled = false;
-  button.textContent = `Gerar Pix de ${formatCurrency(selectedPlan.price)}`;
+  button.textContent = `Gerar Pix de ${formatCurrency(getCheckoutTotal())}`;
 }
 
 function setSubmitButtonGenerated(button) {
@@ -541,7 +628,7 @@ function setSubmitButtonGenerated(button) {
 }
 
 function getCheckoutSignature(payload = {}) {
-  return [selectedPlan.id, payload.name || "", payload.email || ""]
+  return [selectedPlan.id, payload.name || "", payload.email || "", checkoutOfferAccepted]
     .map((value) => String(value).trim().toLowerCase())
     .join("|");
 }
@@ -655,6 +742,7 @@ promoToggle?.addEventListener("click", () => {
 trackMetaEvent("PageView", {}, { eventId: window.__metaPageViewEventId, skipBrowser: true });
 trackMetaEvent("ViewContent", getPixelProductParams());
 updatePromoValidity();
+updateCheckoutTotals();
 restoreActiveOrder();
 
 if (previewVideos.length) {
@@ -664,8 +752,8 @@ if (previewVideos.length) {
   document.addEventListener("keydown", playPreviewVideos, { once: true, capture: true });
 }
 
-window.setTimeout(showPurchaseToast, 2600);
-window.setInterval(showPurchaseToast, 14500);
+window.setTimeout(showPurchaseToast, 1600);
+window.setInterval(showPurchaseToast, 5000);
 purchaseToastClose?.addEventListener("click", () => {
   purchaseToast?.classList.remove("is-visible");
 });
@@ -683,6 +771,12 @@ upsellAcceptButton?.addEventListener("click", () => {
     label: "6 Meses",
     price: 19.9,
   }, { fresh: true });
+});
+
+offerChoiceButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    setCheckoutOfferAccepted(button.dataset.offerChoice === "yes");
+  });
 });
 
 openCheckoutButtons.forEach((button) => button.addEventListener("click", () => openCheckout(button)));
@@ -753,6 +847,7 @@ checkoutForm?.addEventListener("submit", async (event) => {
         },
         deliveryPreference: payload.deliveryPreference,
         planId: payload.planId || selectedPlan.id,
+        offerAccepted: checkoutOfferAccepted,
         attribution: getMetaAttributionData(),
         tracking: getTrackingData(),
       }),
@@ -771,7 +866,12 @@ checkoutForm?.addEventListener("submit", async (event) => {
       orderId: currentOrderId,
       transactionHash: currentTransactionHash,
       customer: latestCustomerData,
-      item: { ...selectedPlan },
+      item: {
+        ...selectedPlan,
+        price: getCheckoutTotal(),
+        offerAccepted: checkoutOfferAccepted,
+      },
+      offerAccepted: checkoutOfferAccepted,
       pixCode: data.pix_code || "",
       pixBase64: data.pix_base64 || "",
     });
