@@ -328,20 +328,31 @@ textarea:focus {
 }
 
 .product-period {
-  width: max-content;
   margin-top: 5px;
-  padding-bottom: 2px;
-  border-bottom: 4px solid #1fc987;
   color: #2d3748;
-  font-size: 0.83rem;
+  font-size: 0.9rem;
   font-weight: 900;
-  line-height: 1.1;
+  line-height: 1.15;
+}
+
+.product-period[hidden] {
+  display: none;
 }
 
 .product-row span {
   margin-top: 8px;
   color: var(--orange);
+  font-size: 0.88rem;
   font-weight: 950;
+}
+
+#checkout-plan-price {
+  white-space: nowrap;
+}
+
+.plan-price-old,
+.plan-price-prefix {
+  display: inline;
 }
 
 .bump-box {

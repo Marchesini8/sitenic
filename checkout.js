@@ -18,6 +18,7 @@ const plans = {
   "15d": {
     label: "Privacy Nicolle Caroline",
     period: "15 Dias",
+    originalPrice: 25.9,
     price: 9.9,
   },
   "30d": {
@@ -71,6 +72,16 @@ function getSelectedAddons() {
 
 function getTotal() {
   return getSelectedAddons().reduce((sum, addon) => sum + addon.price, selectedPlan.price);
+}
+
+function getPlanPriceHtml(plan) {
+  const currentPrice = formatCurrency(plan.price);
+
+  if (!plan.originalPrice || plan.originalPrice <= plan.price) {
+    return currentPrice;
+  }
+
+  return `<span class="plan-price-old">${formatCurrency(plan.originalPrice)}</span> <span class="plan-price-prefix">Por</span> ${currentPrice}`;
 }
 
 function getPixelProductParams() {
@@ -232,7 +243,7 @@ function updateTotal() {
     checkoutPlanPeriod.textContent = showPeriod ? selectedPlan.period : "";
     checkoutPlanPeriod.hidden = !showPeriod;
   }
-  if (checkoutPlanPrice) checkoutPlanPrice.textContent = formatCurrency(selectedPlan.price);
+  if (checkoutPlanPrice) checkoutPlanPrice.innerHTML = getPlanPriceHtml(selectedPlan);
   if (checkoutTotal) checkoutTotal.textContent = formatCurrency(getTotal());
   if (generatePixButton) generatePixButton.textContent = `GERAR PIX - ${formatCurrency(getTotal())}`;
 }
