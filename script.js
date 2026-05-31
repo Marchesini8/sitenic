@@ -55,7 +55,7 @@ let lastPixSignature = "";
 let selectedPlan = {
   id: "15d",
   label: "15 Dias",
-  price: 9.9,
+  price: 19.9,
 };
 let checkoutOfferAccepted = false;
 let purchaseToastTimer = null;
